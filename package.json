@@ -1,0 +1,10 @@
+{
+  "name": "tefa-bahagia-pos",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Sistem Kasir / POS TEFA BAHAGIA DIGITAL PRINT — real-time multi-device sync via Firebase, hosting via Vercel.",
+  "scripts": {
+    "dev": "npx serve public -p 3000",
+    "start": "npx serve public -p 3000"
+  }
+}

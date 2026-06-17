@@ -1,0 +1,34 @@
+rules_version = '2';
+
+// ================================================================
+// FIRESTORE SECURITY RULES — TEFA BAHAGIA POS
+// ================================================================
+// Aplikasi ini memakai login sendiri (username/password tersimpan
+// di Firestore), BUKAN Firebase Authentication. Karena itu rule di
+// bawah ini membuka akses baca/tulis ke collection "pos_tefa" tanpa
+// syarat firebase-auth.
+//
+// ⚠️ PENTING — KEAMANAN:
+// Karena tidak memakai Firebase Auth, siapa pun yang tahu/menebak
+// firebaseConfig (apiKey, projectId, dst — yang memang publik & ada
+// di kode frontend) secara TEKNIS BISA membaca/menulis langsung ke
+// Firestore lewat Firebase SDK / REST API, melewati login aplikasi.
+//
+// Ini adalah trade-off wajar untuk POS skala kecil/menengah yang
+// tidak expose data sangat sensitif (no data kartu kredit, dsb).
+// Jika butuh keamanan lebih tinggi, langkah lanjutan yang disarankan:
+//   1. Migrasi ke Firebase Authentication (Anonymous Auth minimal),
+//      lalu ganti rule di bawah menjadi: allow read, write: if request.auth != null;
+//   2. Atau pindahkan tulis-data ke Cloud Functions / Vercel API Route
+//      yang memvalidasi sesi sebelum menyentuh Firestore.
+// Untuk kebutuhan saat ini (akses publik antar device, real-time
+// sync, tanpa server backend tambahan), rule berikut sudah cukup.
+// ================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /pos_tefa/{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
