@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a56db"/>
+      <stop offset="100%" stop-color="#60a5fa"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="26" fill="url(#bg)"/>
+  <!-- printer body -->
+  <rect x="28" y="46" width="64" height="34" rx="6" fill="#ffffff"/>
+  <rect x="36" y="30" width="48" height="22" rx="4" fill="#e8f0fe"/>
+  <rect x="40" y="58" width="40" height="6" rx="2" fill="#cbd5f5"/>
+  <rect x="40" y="68" width="26" height="4" rx="2" fill="#cbd5f5"/>
+  <!-- output sheet -->
+  <rect x="34" y="78" width="52" height="24" rx="3" fill="#ffffff" stroke="#e2e8f4" stroke-width="2"/>
+  <rect x="42" y="86" width="36" height="3" rx="1.5" fill="#94a3b8"/>
+  <rect x="42" y="93" width="24" height="3" rx="1.5" fill="#94a3b8"/>
+  <!-- accent light -->
+  <circle cx="78" cy="40" r="5" fill="url(#accent)"/>
+</svg>
