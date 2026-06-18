@@ -1,34 +1,30 @@
 rules_version = '2';
 
-// ================================================================
+// ============================================================
 // FIRESTORE SECURITY RULES — TEFA BAHAGIA POS
-// ================================================================
-// Aplikasi ini memakai login sendiri (username/password tersimpan
-// di Firestore), BUKAN Firebase Authentication. Karena itu rule di
-// bawah ini membuka akses baca/tulis ke collection "pos_tefa" tanpa
-// syarat firebase-auth.
 //
-// ⚠️ PENTING — KEAMANAN:
-// Karena tidak memakai Firebase Auth, siapa pun yang tahu/menebak
-// firebaseConfig (apiKey, projectId, dst — yang memang publik & ada
-// di kode frontend) secara TEKNIS BISA membaca/menulis langsung ke
-// Firestore lewat Firebase SDK / REST API, melewati login aplikasi.
+// Cara pakai:
+//   1. Buka Firebase Console → Firestore Database → tab "Rules".
+//   2. Salin-tempel isi berkas ini, lalu klik "Publish".
 //
-// Ini adalah trade-off wajar untuk POS skala kecil/menengah yang
-// tidak expose data sangat sensitif (no data kartu kredit, dsb).
-// Jika butuh keamanan lebih tinggi, langkah lanjutan yang disarankan:
-//   1. Migrasi ke Firebase Authentication (Anonymous Auth minimal),
-//      lalu ganti rule di bawah menjadi: allow read, write: if request.auth != null;
-//   2. Atau pindahkan tulis-data ke Cloud Functions / Vercel API Route
-//      yang memvalidasi sesi sebelum menyentuh Firestore.
-// Untuk kebutuhan saat ini (akses publik antar device, real-time
-// sync, tanpa server backend tambahan), rule berikut sudah cukup.
-// ================================================================
-
+// Aplikasi ini memakai Firebase Anonymous Authentication
+// (diaktifkan otomatis lewat js/firebase-config.js) sehingga
+// rule di bawah mensyaratkan request datang dari sesi yang sudah
+// "masuk" secara anonim lewat aplikasi — bukan dibuka bebas oleh
+// siapa saja di internet tanpa melalui index.html ini.
+//
+// PENTING: Pastikan provider "Anonymous" sudah diaktifkan di
+// Firebase Console → Authentication → Sign-in method, atau semua
+// permintaan baca/tulis akan ditolak.
+// ============================================================
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /pos_tefa/{document=**} {
-      allow read, write: if true;
+    match /pos_tefa/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    // Tolak akses ke koleksi lain secara default.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

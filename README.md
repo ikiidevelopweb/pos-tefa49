@@ -1,139 +1,166 @@
-# TEFA BAHAGIA DIGITAL PRINT — Sistem Kasir POS
+# POS Kasir — TEFA BAHAGIA DIGITAL PRINT
 
-Sistem kasir / point-of-sale untuk usaha digital print, dengan sinkronisasi
-**real-time multi-device** lewat Firebase Firestore, siap deploy gratis ke **Vercel**.
+Aplikasi kasir (Point of Sale) berbasis web, statis (HTML/CSS/JS murni, tanpa
+backend/server custom), dengan data tersimpan di **Firebase Firestore** agar
+otomatis tersinkron **real-time** antar device (kasir 1, kasir 2, admin, dsb),
+dan tetap bisa diakses **offline** lewat cache lokal browser.
 
-## ✨ Fitur
-
-- Login multi-role: Admin & Kasir, dengan hak akses per menu
-- Kasir / POS: keranjang belanja, pencarian pelanggan, DP, struk, kirim struk via WhatsApp
-- Restock barang & riwayat pembelian
-- Laporan penjualan, pembelian, dan ringkasan operasional (laba/rugi)
-- Data master: Barang, Kategori, Satuan, Supplier, Pelanggan, Metode Pembayaran
-- Log login, manajemen user, hak akses per role, profil toko
-- **Sinkronisasi real-time** antar device (HP, tablet, laptop) via Firebase Firestore
-- Bekerja offline (cache lokal) lalu otomatis sync saat online kembali
-- Backup / restore data ke file JSON
-- Responsif penuh: mobile, tablet, desktop
-
-## 📁 Struktur Project
+## Struktur Berkas
 
 ```
-tefa-pos/
-├── public/                  ← semua yang di-deploy (root Vercel)
-│   ├── index.html
-│   ├── manifest.json
-│   ├── css/
-│   │   └── styles.css
-│   ├── js/
-│   │   ├── firebase-init.js     ← konfigurasi & inisialisasi Firebase
-│   │   ├── utils.js              ← helper umum (format, toast, modal)
-│   │   ├── data.js                ← struktur data default (DB)
-│   │   ├── sync.js                ← simpan/muat data, listener real-time
-│   │   ├── auth.js                ← login, logout, sesi
-│   │   ├── router.js              ← sidebar & navigasi antar halaman
-│   │   ├── page-dashboard.js
-│   │   ├── page-kasir.js          ← POS, keranjang, struk, WhatsApp
-│   │   ├── page-restock.js
-│   │   ├── page-laporan.js
-│   │   ├── page-master.js         ← CRUD data master
-│   │   ├── page-pengaturan.js     ← user, hak akses, profil
-│   │   └── app.js                  ← entry point
-│   └── img/
-│       └── logo-tefa.svg    ← logo default (ganti dengan logo Anda jika perlu)
-├── firebase.json
-├── firestore.rules
-├── vercel.json
-├── package.json
-└── README.md (file ini)
+index.html               ← struktur halaman (HTML murni)
+css/style.css             ← semua styling, termasuk breakpoint responsif
+js/firebase-config.js     ← konfigurasi & inisialisasi Firebase (EDIT DI SINI)
+js/utils.js                ← helper umum (format Rupiah, toast, modal, dsb)
+js/data.js                 ← skema state aplikasi + data contoh awal + menu sidebar
+js/sync.js                 ← simpan/baca data ke Firestore + fallback localStorage
+js/auth.js                 ← login/logout, sidebar, jam, routing antar halaman
+js/page-dashboard.js       ← halaman Dashboard
+js/page-kasir.js           ← halaman Kasir/POS, keranjang, struk, kirim WhatsApp
+js/page-restock.js         ← halaman Restock barang
+js/page-laporan.js         ← halaman Laporan (penjualan, pembelian, operasional)
+js/page-master.js          ← data master (barang, kategori, satuan, supplier, dst)
+js/page-settings.js        ← log login, data user, hak akses, profil toko & saya
+assets/img/logo-tefa.svg   ← logo toko (ganti dengan logo asli bila perlu)
+firestore.rules            ← contoh security rules Firestore (lihat di bawah)
+vercel.json                ← konfigurasi deployment Vercel
 ```
 
-## 🔥 Langkah 1 — Setup Firebase (gratis)
+Setiap berkas JS dimuat sebagai script biasa (bukan ES module) sesuai urutan
+di `index.html` — urutan ini penting karena beberapa berkas bergantung pada
+variabel global yang didefinisikan di berkas sebelumnya.
 
-1. Buka [Firebase Console](https://console.firebase.google.com/) → **Add project** → beri nama (misal `tefa-bahagia-pos`).
-2. Setelah project dibuat, masuk ke **Build → Firestore Database** → **Create database** → pilih mode **Production** → pilih lokasi server (`asia-southeast2` / Jakarta direkomendasikan untuk latensi terbaik di Indonesia).
-3. Masuk ke **Project settings** (ikon gerigi) → scroll ke bagian **Your apps** → klik ikon **Web (`</>`)** → daftarkan app (nama bebas, tidak perlu centang Firebase Hosting).
-4. Firebase akan menampilkan objek `firebaseConfig` seperti ini:
-   ```js
-   const firebaseConfig = {
-     apiKey: "AIzaSy...",
-     authDomain: "tefa-bahagia-pos.firebaseapp.com",
-     projectId: "tefa-bahagia-pos",
-     storageBucket: "tefa-bahagia-pos.appspot.com",
-     messagingSenderId: "...",
-     appId: "..."
-   };
-   ```
-5. **Salin nilai-nilai tersebut** ke file `public/js/firebase-init.js`, ganti bagian `window.firebaseConfig = {...}` dengan punya Anda.
-6. Masuk ke tab **Rules** di Firestore Database, lalu copy-paste isi file `firestore.rules` dari project ini, klik **Publish**.
-   > Catatan keamanan ada di komentar dalam file `firestore.rules` — silakan dibaca.
+## 1. Setup Firebase (database + sinkron real-time)
 
-Itu saja — tidak perlu setup billing/credit card untuk skala pemakaian normal (Firestore free tier: 50rb baca & 20rb tulis/hari, lebih dari cukup untuk 1 toko).
+Project Firebase (`tefa-bahagia`) sudah dikonfigurasi di `js/firebase-config.js`,
+tapi **Firestore Database belum otomatis aktif** di project baru — ikuti
+langkah ini sekali saja:
 
-## ☁️ Langkah 2 — Deploy ke Vercel (gratis)
+1. Buka [Firebase Console](https://console.firebase.google.com) → pilih project Anda
+   (atau buat project baru, lalu ganti object `firebaseConfig` di
+   `js/firebase-config.js` dengan konfigurasi project Anda — ambil dari
+   **Project settings → Your apps → ikon Web `</>`**).
+2. Menu **Build → Firestore Database** → klik **Create database**.
+   Pilih lokasi server terdekat (mis. `asia-southeast2` untuk Indonesia),
+   mode **Production**.
+3. Menu **Build → Authentication → Sign-in method** → aktifkan provider
+   **Anonymous**. (Aplikasi otomatis login anonim di belakang layar agar
+   Firestore Rules bisa membatasi akses hanya untuk pengguna lewat aplikasi
+   ini, bukan publik bebas — sistem login username/password kustom aplikasi
+   ini tidak berubah, lapisan anonim ini murni untuk keamanan database.)
+4. Menu **Firestore Database → tab Rules** → salin isi `firestore.rules`
+   dari folder ini, tempel, lalu **Publish**.
 
-### Opsi A — Tanpa command line (paling mudah)
-1. Upload folder project ini ke **GitHub** (buat repository baru, upload semua file).
-2. Buka [vercel.com](https://vercel.com) → **Sign up / Login** (bisa pakai akun GitHub).
-3. Klik **Add New → Project** → pilih repository GitHub Anda → **Import**.
-4. Vercel akan otomatis mendeteksi ini sebagai static site. Pastikan:
-   - **Root Directory**: biarkan default (`.`)
-   - **Output Directory** / **Build Settings**: tidak perlu diubah (project ini sudah punya `vercel.json` yang mengarahkan ke folder `public`)
-5. Klik **Deploy**. Tunggu ±30 detik. Selesai — Anda akan mendapat URL publik seperti `https://tefa-pos.vercel.app`.
+Tanpa langkah 2–4, aplikasi tetap berjalan tapi data hanya tersimpan lokal di
+browser masing-masing device (tidak tersinkron) — akan muncul banner
+peringatan kuning di layar login.
 
-### Opsi B — Lewat terminal (Vercel CLI)
+### Catatan keamanan
+- API key Firebase di `firebase-config.js` **bukan rahasia** (semua web app
+  Firebase menampilkannya di sisi klien) — keamanan database diatur lewat
+  **Firestore Rules**, bukan dengan menyembunyikan key tersebut.
+- Untuk pengamanan tambahan (opsional, disarankan untuk produksi jangka
+  panjang): di Google Cloud Console, batasi API key tersebut hanya untuk
+  domain Vercel Anda (HTTP referrer restriction), dan aktifkan
+  **Firebase App Check**.
+- Login admin/kasir di aplikasi ini (username/password) tersimpan di dalam
+  data Firestore itu sendiri — ganti password default (lihat bagian
+  "Akun Default" di bawah) segera setelah deploy pertama kali.
+
+## 2. Deploy ke Vercel (akses publik)
+
+**Opsi A — lewat GitHub (disarankan, auto-deploy setiap push):**
+1. Push folder ini ke repository GitHub baru.
+2. Buka [vercel.com](https://vercel.com) → **Add New → Project** → import
+   repository tersebut.
+3. Framework preset: pilih **Other** (situs statis, tidak perlu build
+   command/output directory khusus). Klik **Deploy**.
+4. Setelah selesai, Anda akan mendapat URL publik seperti
+   `https://nama-project.vercel.app` yang bisa diakses dan disinkron dari
+   device mana pun.
+
+**Opsi B — lewat Vercel CLI (cepat, tanpa GitHub):**
 ```bash
-npm install -g vercel
+npm i -g vercel
 cd tefa-pos
-vercel login
 vercel --prod
 ```
 
-Setiap kali ada perubahan kode dan di-push ke GitHub, Vercel otomatis re-deploy.
-
-## 🖥️ Coba di Lokal (opsional, sebelum deploy)
-
-```bash
-cd tefa-pos
-npx serve public
-```
-Buka `http://localhost:3000` di browser.
-
-> ⚠️ Jangan buka `index.html` langsung lewat `file://` di browser — beberapa fitur (terutama Firebase) bisa gagal dimuat karena batasan CORS pada protokol file lokal. Selalu gunakan server (baik `npx serve`, Vercel, maupun live-server lainnya).
-
-## 👤 Akun Login Bawaan
+## 3. Akun Default (ganti setelah deploy!)
 
 | Role  | Username | Password      |
 |-------|----------|---------------|
 | Admin | admin    | tefa2424      |
-| Admin | admin2   | admintefa49   |
+| Admin | admin    | admintefa49   |
 | Kasir | kasir1   | kasir11       |
 | Kasir | kasir2   | kasir22       |
 
-**Segera ganti password ini** setelah deploy, lewat menu **Pengaturan → Data User** (login sebagai admin).
+Ganti password lewat menu **Profil Saya** (untuk akun sendiri) atau
+**Pengaturan → Data User** (khusus admin, untuk mengelola semua akun).
 
-## 🔄 Cara Kerja Sinkronisasi Real-time
+## 4. Mengganti Logo
 
-- Setiap perubahan data (transaksi baru, edit barang, dll) langsung disimpan ke **Firebase Firestore** dan ke **localStorage** (sebagai cache offline).
-- Semua device yang sedang membuka aplikasi (dan sudah login) akan **otomatis menerima update** dalam hitungan detik lewat Firestore real-time listener — tidak perlu refresh manual.
-- Jika koneksi internet putus, aplikasi tetap bisa dipakai dari cache lokal; begitu online kembali, data otomatis tersinkron ulang.
-- Ikon status sinkronisasi ada di pojok kanan atas (topbar) — klik untuk sync manual kapan saja.
+Ganti berkas `assets/img/logo-tefa.svg` dengan logo Anda sendiri (boleh
+`.png`/`.jpg`/`.svg`, cukup samakan nama berkas atau ubah path `src` di
+`index.html`). Jika gambar gagal dimuat, aplikasi otomatis menampilkan ikon
+cadangan agar tampilan tidak rusak.
 
-## 🛠️ Bug & Perbaikan dari Versi Sebelumnya
+## 5. Backup & Reset Data
 
-Dibandingkan file `index.html` asli, perbaikan yang dilakukan:
-- Kode dipisah jadi modul-modul terpisah (HTML/CSS/JS) agar mudah dipelihara dan tidak ada konflik antar bagian.
-- Pencarian pelanggan di Kasir/POS yang sebelumnya tidak berfungsi (`oninput` tidak terhubung dengan benar) — sudah diperbaiki dan dilengkapi dropdown otomatis + opsi tambah pelanggan baru langsung dari kasir.
-- Validasi input (nama wajib diisi, qty tidak melebihi stok, dsb) ditambahkan di semua form CRUD agar tidak menyimpan data kosong/rusak.
-- `window.confirm()` (yang sering diblokir oleh WebView/browser tertentu) diganti modal konfirmasi custom (`confirmAsync`) yang konsisten di semua perangkat.
-- Status sinkronisasi (`_syncTimer`/indikator cloud) yang sebelumnya cuma dummy, kini benar-benar terhubung ke Firestore real-time listener.
-- Semua teks dinamis (nama barang, pelanggan, dll) di-escape (`escapeHtml`) untuk mencegah HTML rusak/celah XSS bila ada karakter khusus seperti `<`, `>`, `"`.
-- Tampilan dirombak agar benar-benar responsif: sidebar jadi off-canvas (geser dari kiri) di mobile, grid produk & stat menyesuaikan lebar layar, modal full-width di mobile, tabel bisa di-scroll horizontal di layar kecil.
-- Reset password Cuma dilakukan jika field diisi (tidak menimpa password lama jika dikosongkan saat edit user).
+Menu **Profil Toko** (admin) menyediakan:
+- **Export Backup JSON** — mengunduh seluruh data sebagai berkas `.json`.
+- **Import Backup JSON** — memulihkan data dari berkas backup.
+- **Reset ke Data Awal** — menghapus seluruh data (lokal + Firestore) dan
+  memulai ulang dengan data contoh.
 
-## 📦 Backup Data
+## 6. Pengembangan Lokal
 
-Masuk ke **Pengaturan → Profil Toko** (sebagai admin) untuk export/import data ke file `.json`, atau reset semua data ke kondisi awal.
+Karena aplikasi memuat berkas lewat path relatif (`css/style.css`,
+`js/...`), jalankan lewat server lokal (bukan dibuka langsung sebagai
+`file://`), misalnya:
+```bash
+npx serve .
+# atau
+python3 -m http.server 8080
+```
+lalu buka `http://localhost:8080`.
 
----
-Dibuat untuk **TEFA BAHAGIA DIGITAL PRINT** — *Berkah & Bahagia Dalam Setiap Cetakan* 🖨️
+## Perubahan & Perbaikan dari Versi Sebelumnya
+
+- **Perbaikan bug**: tombol sinkronisasi (ikon cloud di topbar / menu "Sinkronisasi Data")
+  sebelumnya hanya membaca status lama dan langsung menampilkan notifikasi
+  "Firebase belum terkonfigurasi" tanpa benar-benar mencoba menyambung ulang —
+  jadi notifikasi itu terus muncul setiap diklik meski masalah di Firebase
+  Console sudah diperbaiki, sampai halaman di-reload manual. Sekarang tombol
+  ini **mencoba menyambung ulang setiap kali diklik**, dan jika gagal,
+  menampilkan **alasan spesifik** (mis. "Akses ditolak oleh Security Rules",
+  "Provider Anonymous belum diaktifkan", dll) bukan pesan generik.
+
+- Memisahkan satu berkas HTML raksasa (~2.650 baris) menjadi berkas
+  HTML/CSS/JS terstruktur agar mudah dirawat.
+- **Perbaikan bug kritis**: tombol Logout sebelumnya memanggil variabel
+  `_syncTimer` yang tidak pernah dideklarasikan — menyebabkan error dan
+  proses logout gagal total. Sudah diperbaiki (kini menghentikan listener
+  real-time Firestore dengan benar saat logout).
+- Perbaikan fungsi `showFirebaseGuide()` yang dipanggil dari banner
+  peringatan tapi sebelumnya tidak pernah didefinisikan (akan error jika
+  diklik) — sekarang menampilkan panduan setup lengkap.
+- Perbaikan tampilan ikon kategori barang di halaman Restock yang
+  sebelumnya menampilkan teks nama class CSS mentah (mis. `fa-solid
+  fa-file`) bukan ikon sebenarnya.
+- Perbaikan kalkulasi kolom "Kurang" di halaman Restock yang sebelumnya
+  selalu menambahkan angka tetap 200 secara tidak masuk akal.
+- Profil Toko (nama, alamat, telepon, tagline) kini benar-benar
+  dipakai di struk cetak & pesan WhatsApp — sebelumnya nilai-nilai
+  tersebut di-hardcode sehingga perubahan di menu Pengaturan tidak
+  berefek pada struk.
+- Menambahkan Firebase Anonymous Authentication + Firestore Rules contoh
+  agar database tidak terbuka bebas ke publik, tetap kompatibel dengan
+  sinkronisasi real-time multi-device.
+- Mengganti referensi logo lokal yang rusak (`img/logo-tefa.png`, berkas
+  yang tidak pernah ada) dengan logo SVG bawaan + fallback otomatis jika
+  gambar gagal dimuat.
+- Tata letak responsif (mobile/tablet/desktop) sudah cukup lengkap di versi
+  sebelumnya dan dipertahankan — sidebar collapsible, tabel scroll
+  horizontal, grid produk kasir menyesuaikan ukuran layar, modal full-width
+  di mobile, dsb.
